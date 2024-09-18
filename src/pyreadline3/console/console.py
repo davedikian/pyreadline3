@@ -166,6 +166,7 @@ funcs = [
     "GetConsoleMode",
     "GetConsoleScreenBufferInfo",
     "GetConsoleTitleW",
+    "GetNumberOfConsoleInputEvents",
     "GetProcAddress",
     "GetStdHandle",
     "PeekConsoleInputW",
@@ -535,12 +536,15 @@ class Console(object):
         Cevent = INPUT_RECORD()
         count = DWORD(0)
         while True:
+            event_count = DWORD(0)
             if inputHookFunc:
                 call_function(inputHookFunc, ())
-            status = self.ReadConsoleInputW(self.hin, byref(Cevent), 1, byref(count))
-            if status and count.value == 1:
-                e = event(self, Cevent)
-                return e
+            self.GetNumberOfConsoleInputEvents(self.hin, byref(event_count))
+            if event_count:
+                status = self.ReadConsoleInputW(self.hin, byref(Cevent), 1, byref(count))
+                if status and count.value == 1:
+                    e = event(self, Cevent)
+                    return e
 
     def getkeypress(self):
         """Return next key press event from the queue, ignoring others."""
@@ -556,7 +560,6 @@ class Console(object):
                     return e
             elif (e.type == "KeyRelease") and (
                 e.keyinfo == KeyPress("S", False, True, False, "S")
-                or e.keyinfo == KeyPress("C", False, True, False, "C")
             ):
                 log("getKeypress:%s,%s,%s" % (e.keyinfo, e.keycode, e.type))
                 return e
@@ -690,6 +693,8 @@ Console.GetConsoleScreenBufferInfo.argtypes = [
 ]  # HANDLE, PCONSOLE_SCREEN_BUFFER_INFO
 Console.GetConsoleTitleW.restype = DWORD
 Console.GetConsoleTitleW.argtypes = [c_wchar_p, DWORD]  # LPTSTR , DWORD
+Console.GetNumberOfConsoleInputEvents.restype = BOOL
+Console.GetNumberOfConsoleInputEvents.argtypes = [HANDLE, LPDWORD] # HANDLE , LPDWORD
 Console.GetProcAddress.restype = FARPROC
 Console.GetProcAddress.argtypes = [HMODULE, c_char_p]  # HMODULE , LPCSTR
 Console.GetStdHandle.restype = HANDLE
